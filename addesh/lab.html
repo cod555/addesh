@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Addesh Lab: test the model</title>
+  <meta name="description" content="Test the Addesh Teachable Machine model on unseen photos and get per-class accuracy tables.">
+  <meta name="theme-color" content="#0B2421">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="preload" href="fonts/readex-pro-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/lab.css">
+  <script src="vendor/tf-4.22.0.min.js" defer></script>
+  <script type="module" src="js/lab.js"></script>
+</head>
+<body class="lab">
+  <header class="lab-top">
+    <a class="brand" href="./">
+      <svg class="brand-mark" id="brand-mark" viewBox="0 0 100 100" aria-hidden="true"></svg>
+      <span>Addesh Lab</span>
+    </a>
+    <a class="btn ghost" href="./">Open the scanner</a>
+  </header>
+
+  <main class="lab-main">
+    <section class="intro">
+      <h1>Test the model on photos it has never seen</h1>
+      <p>Load your Teachable Machine model, check your photos against the assignment rules, and copy accuracy tables straight into your slides. Nothing leaves this computer.</p>
+    </section>
+
+    <section class="step" aria-labelledby="h-model">
+      <div class="step-num" aria-hidden="true">1</div>
+      <div class="step-body">
+        <h2 id="h-model">Load the model</h2>
+        <p class="lead">The model folder of this app, a Teachable Machine shareable link, or the files you downloaded from Teachable Machine.</p>
+        <div class="source-grid">
+          <div class="field">
+            <label for="lab-url">Teachable Machine link</label>
+            <div class="inline">
+              <input id="lab-url" type="url" dir="ltr" autocomplete="off" spellcheck="false" placeholder="https://teachablemachine.withgoogle.com/models/…">
+              <button class="btn primary" id="lab-load-url" type="button">Load link</button>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label">Or</span>
+            <div class="inline wrap">
+              <button class="btn" id="lab-load-builtin" type="button">Use the model folder</button>
+              <label class="btn file-btn">Choose model files<input type="file" id="lab-files" accept=".zip,.json,.bin" multiple></label>
+            </div>
+          </div>
+        </div>
+        <p class="hint">Model files: the .zip from Teachable Machine (Export Model, TensorFlow.js tab, Download), or the model.json, metadata.json and weights.bin inside it.</p>
+        <div class="out" id="model-out" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section class="step" aria-labelledby="h-train">
+      <div class="step-num" aria-hidden="true">2</div>
+      <div class="step-body">
+        <h2 id="h-train">Check the training photos <span class="slide-tag">Slide 3</span></h2>
+        <p class="lead">Pick the folder with one subfolder per class. Photos you took inside Teachable Machine can be saved as files from the ⋮ menu on each class (Download Samples).</p>
+        <div class="drop" id="train-drop">
+          <p>Drop the training folder here</p>
+          <label class="btn file-btn">Choose folder<input type="file" id="train-input" webkitdirectory multiple></label>
+        </div>
+        <div class="out" id="train-out" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section class="step" aria-labelledby="h-test">
+      <div class="step-num" aria-hidden="true">3</div>
+      <div class="step-body">
+        <h2 id="h-test">Test on unseen photos <span class="slide-tag">Slide 5</span></h2>
+        <p class="lead">Photos taken on another day, in another place or by another person, and never uploaded to Teachable Machine. Name each subfolder after its class, for example <code>test/USD 20</code>.</p>
+        <div class="drop" id="test-drop">
+          <p>Drop the test folder here</p>
+          <label class="btn file-btn">Choose folder<input type="file" id="test-input" webkitdirectory multiple></label>
+        </div>
+        <label class="toggle-line">
+          <input type="checkbox" class="switch" id="lab-mirror" checked>
+          <span>Also check the mirrored image, the same way the scanner does</span>
+        </label>
+        <div class="out" id="test-out" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section class="step" aria-labelledby="h-compare">
+      <div class="step-num" aria-hidden="true">4</div>
+      <div class="step-body">
+        <h2 id="h-compare">Compare before and after <span class="slide-tag">Slide 4</span></h2>
+        <p class="lead">Save a test run, change one thing in Teachable Machine (more photos, more epochs, a cleaner class), retrain, test again, then compare the two runs.</p>
+        <div class="out" id="compare-out"></div>
+      </div>
+    </section>
+  </main>
+
+  <dialog class="viewer" id="viewer" aria-label="Prediction">
+    <div class="slide" id="slide"></div>
+    <div class="viewer-bar">
+      <span class="hint">Screenshot this card for your slides (Windows: Win + Shift + S)</span>
+      <div class="inline">
+        <button class="btn" id="v-prev" type="button" aria-label="Previous photo">Previous</button>
+        <button class="btn" id="v-next" type="button" aria-label="Next photo">Next</button>
+        <button class="btn primary" id="v-close" type="button">Close</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+</body>
+</html>
