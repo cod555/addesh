@@ -1,7 +1,7 @@
 // Offline support. Every request goes to the network first (so a new deploy or a retrained
 // model shows up immediately) and falls back to the saved copy when there is no connection.
 
-const CACHE = 'addesh-v4';
+const CACHE = 'addesh-v6';
 
 const APP_SHELL = [
   './',
@@ -32,6 +32,9 @@ const APP_SHELL = [
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/apple-touch-icon.png',
+  'model/model.json',
+  'model/metadata.json',
+  'model/model.weights.bin',
 ];
 
 self.addEventListener('install', (event) => {

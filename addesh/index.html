@@ -114,12 +114,9 @@
 
       <fieldset>
         <legend data-i18n="sectionModel"></legend>
-        <label class="field-label" for="model-url" data-i18n="modelLinkLabel"></label>
-        <input type="url" id="model-url" dir="ltr" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://teachablemachine.withgoogle.com/models/…">
-        <div class="row-buttons">
-          <button type="button" class="pill" id="load-link" data-i18n="loadLink"></button>
-          <button type="button" class="pill ghost" id="use-builtin" data-i18n="useBuiltIn"></button>
-        </div>
+        <input type="hidden" id="model-url">
+        <button type="button" id="load-link" hidden></button>
+        <button type="button" id="use-builtin" hidden></button>
         <p class="model-status" id="model-status" role="status"></p>
       </fieldset>
 
