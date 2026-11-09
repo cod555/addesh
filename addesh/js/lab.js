@@ -166,7 +166,7 @@ function renderModel() {
           el('td', {}, info.kind === 'nothing' ? '—' : [speakButton(speechText(info, 'en'), 'en'), speechText(info, 'en')]),
           el('td', { class: 'ar', lang: 'ar', dir: 'rtl' }, info.kind === 'nothing' ? '—' : [speakButton(speechText(info, 'ar'), 'ar'), speechText(info, 'ar')]),
         ))))),
-    m.source.kind === 'url' && m.source.url !== builtInUrl()
+    false
       ? el('div', { class: 'toolbar' },
         el('p', { class: 'hint' }, 'The scanner uses the model folder unless you tell it otherwise.'),
         el('button', {

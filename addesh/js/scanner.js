@@ -49,11 +49,12 @@ function save(key, value) {
   store.set(key, value);
 }
 
-const params = new URLSearchParams(location.search);
-let paramModel = params.get('model');
+// The model is built in and locked: no link, setting or address-bar option can change it.
+let paramModel = null;
+store.set('modelUrl', '');
 
 const builtInUrl = () => normalizeModelUrl(CONFIG.modelUrl);
-const activeModelUrl = () => normalizeModelUrl(paramModel || prefs.modelUrl || CONFIG.modelUrl);
+const activeModelUrl = () => builtInUrl();
 
 // ---------- state ----------
 
@@ -217,16 +218,65 @@ function layoutFrame() {
   Object.assign(els.frame.style, { width: `${side}px`, height: `${side}px` });
 }
 
-async function setTorch(on) {
-  if (!track) return;
+const torchSupported = () => Boolean(track?.getCapabilities?.().torch);
+
+async function setTorch(on, { say = false } = {}) {
+  if (!track) return false;
+  let ok = true;
   try {
     await track.applyConstraints({ advanced: [{ torch: on }] });
     torchOn = on;
   } catch {
+    ok = false;
     torchOn = false;
     toast(t('torchFailed'));
   }
   els.btnTorch.setAttribute('aria-pressed', String(torchOn));
+  if (say && prefs.voice) {
+    const key = !ok ? 'sNoTorch' : torchOn ? 'sTorchOn' : 'sTorchOff';
+    speak(tl(voiceLang(), key), voiceLang());
+  }
+  return ok;
+}
+
+// ---------- low light: warn the user and offer the flashlight ----------
+
+const DARK_LEVEL = 55; // average brightness 0–255 below which the picture is too dark
+const DARK_FOR_MS = 1500; // must stay dark this long before we warn
+const DARK_REPEAT_MS = 30000; // repeat the warning while it stays dark
+const lightCanvas = document.createElement('canvas');
+lightCanvas.width = lightCanvas.height = 24;
+const lightCtx = lightCanvas.getContext('2d', { willReadFrequently: true });
+let lastLightCheck = 0;
+let darkSince = 0;
+let lastDarkWarning = -Infinity;
+
+const speechBusy = () => Boolean(window.speechSynthesis?.speaking);
+
+function frameBrightness() {
+  try {
+    lightCtx.drawImage(els.video, 0, 0, 24, 24);
+    const d = lightCtx.getImageData(0, 0, 24, 24).data;
+    let sum = 0;
+    for (let i = 0; i < d.length; i += 4) sum += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    return sum / (d.length / 4);
+  } catch {
+    return 255;
+  }
+}
+
+function checkLight(now) {
+  if (now - lastLightCheck < 500 || torchOn) return;
+  lastLightCheck = now;
+  if (frameBrightness() >= DARK_LEVEL) {
+    darkSince = 0;
+    return;
+  }
+  if (!darkSince) darkSince = now;
+  if (now - darkSince < DARK_FOR_MS || now - lastDarkWarning < DARK_REPEAT_MS) return;
+  if (!greeted || !prefs.voice || askingLanguage || speechBusy()) return;
+  lastDarkWarning = now;
+  speak(tl(voiceLang(), torchSupported() ? 'sDarkTorch' : 'sDarkNoTorch'), voiceLang());
 }
 
 async function switchCamera() {
@@ -318,6 +368,7 @@ function scheduleNext() {
 async function tick() {
   if (!running) return;
   const now = performance.now();
+  if (els.video.readyState >= 2) checkLight(now);
   if (!busy && model && now - lastRun >= CONFIG.inferenceIntervalMs && els.video.readyState >= 2) {
     busy = true;
     lastRun = now;
@@ -618,13 +669,28 @@ function greet() {
   });
 }
 
+let tapTimer = 0;
+const DOUBLE_TAP_MS = 350;
+
+/** One tap: repeat the result. Two quick taps: flashlight on or off. */
 function onScreenTap() {
   if (swallowClick) {
     swallowClick = false;
     return;
   }
-  if (!greeted) greet();
-  else repeatLast();
+  unlockAudio();
+  if (tapTimer) {
+    clearTimeout(tapTimer);
+    tapTimer = 0;
+    greeted = true;
+    setTorch(!torchOn, { say: true });
+    return;
+  }
+  tapTimer = setTimeout(() => {
+    tapTimer = 0;
+    if (!greeted) greet();
+    else repeatLast();
+  }, DOUBLE_TAP_MS);
 }
 
 function onHoldStart() {
@@ -707,7 +773,7 @@ function init() {
     }
   });
 
-  els.btnTorch.addEventListener('click', () => setTorch(!torchOn));
+  els.btnTorch.addEventListener('click', () => setTorch(!torchOn, { say: true }));
   els.btnCamera.addEventListener('click', switchCamera);
 
   els.threshold.addEventListener('input', () => {

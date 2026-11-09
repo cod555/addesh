@@ -7,7 +7,8 @@ export const CONFIG = {
   //   './model/'  copy model.json, metadata.json and weights.bin into the /model folder (works offline)
   //   or paste your shareable link, e.g. 'https://teachablemachine.withgoogle.com/models/AbCdEf123/'
   // Anyone can also override it for one visit with ?model=<link or ID> in the address bar.
-  modelUrl: 'https://teachablemachine.withgoogle.com/models/jqdKjxKh0/',
+  // Built-in model (files in ./model/). Trained in Teachable Machine: https://teachablemachine.withgoogle.com/models/jqdKjxKh0/
+  modelUrl: './model/',
 
   // How sure the model must be (0 to 1) before a note counts as recognised.
   threshold: 0.85,
