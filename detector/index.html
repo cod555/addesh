@@ -1,41 +1,152 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0B2421">
-<title>Addesh Detect · قدّيش</title>
-<link rel="icon" href="icons/favicon.svg">
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Addesh Detect: banknote detector</title>
+  <meta name="description" content="Point your phone at a Lebanese lira, US dollar or euro banknote and hear its value. Runs on your device and works offline.">
+  <meta name="theme-color" content="#0B2421">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Addesh">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="preload" href="fonts/readex-pro-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/readex-pro-arabic.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/scanner.css">
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/ort.min.js" crossorigin="anonymous" defer></script>
+  <script type="module" src="js/scanner.js"></script>
 </head>
-<body>
-<main id="stage" data-state="loading">
-  <video id="video" playsinline muted autoplay></video>
-  <img id="still" alt="" hidden>
-  <canvas id="overlay" aria-hidden="true"></canvas>
+<body class="scanner">
 
-  <header class="top">
-    <div class="brand"><img src="icons/icon-192.png" alt="" width="36" height="36"><span>Addesh <b>Detect</b></span></div>
-    <button id="lang" type="button" class="chip" aria-label="Change language">EN</button>
-  </header>
+  <!-- Camera view -->
+  <main class="stage" id="stage">
+    <video id="video" playsinline muted autoplay disablepictureinpicture></video>
+    <div class="frame" id="frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <button class="repeat-hit" id="repeat" type="button" data-i18n-aria="aRepeat"></button>
 
-  <section class="result" aria-live="off">
-    <p id="value" class="value">…</p>
-    <p id="sub" class="sub"></p>
+    <header class="topbar">
+      <span class="mark" lang="ar" aria-hidden="true">قدّيش؟</span>
+      <div class="tools">
+        <button class="tool" id="btn-lang" type="button"><span id="lang-label">ع</span></button>
+        <button class="tool" id="btn-voice" type="button" aria-pressed="true" data-i18n-aria="speak">
+          <svg class="icon-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <svg class="icon-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path d="M16 9.5l5 5M21 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <button class="tool" id="btn-torch" type="button" aria-pressed="false" data-i18n-aria="aTorch" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2.5 6 13.5h5l-1.5 8 7.5-11h-5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="tool" id="btn-camera" type="button" data-i18n-aria="aSwitchCam" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3l1.5-2.5h7L17 8.5h3v10H4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9.2 13.4a2.9 2.9 0 0 1 5.3-1.3M14.8 14.6a2.9 2.9 0 0 1-5.3 1.3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M14.9 10.4v1.9H13M9.1 17.6v-1.9H11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="tool" id="btn-settings" type="button" data-i18n-aria="aSettings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="15" cy="7" r="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <aside class="bars" id="bars" hidden aria-hidden="true">
+      <ol id="bars-list"></ol>
+      <p id="bars-stats"></p>
+    </aside>
+
+    <section class="result" id="result" data-state="loading" aria-hidden="true">
+      <svg class="ring" viewBox="0 0 100 100"><path class="ring-track" id="ring-track"/><path class="ring-fill" id="ring-fill"/></svg>
+      <div class="result-text">
+        <p class="message" id="message"></p>
+        <p class="amount" id="amount" dir="ltr"></p>
+        <p class="unit" id="unit"></p>
+        <p class="hint" data-i18n="tapRepeat"></p>
+      </div>
+    </section>
+    <p class="visually-hidden" id="announcer" aria-live="assertive" aria-atomic="true"></p>
+  </main>
+
+  <!-- Start screen: the whole screen is one button. Phones only allow sound after a tap. -->
+  <section class="start" id="start" hidden>
+    <svg class="medallion" id="medallion" viewBox="0 0 100 100" aria-hidden="true"></svg>
+    <button class="start-hit" id="start-hit" type="button" aria-label="Tap anywhere to start. اضغط في أي مكان للبدء"></button>
+    <div class="start-inner">
+      <h1 class="wordmark"><span class="wordmark-ar" lang="ar" dir="rtl">قدّيش؟</span><span class="wordmark-en" lang="en">Addesh?</span></h1>
+      <p class="tagline" data-i18n="tagline"></p>
+      <p class="tap-cue" aria-hidden="true">
+        <span lang="en" dir="ltr">Tap anywhere to start</span>
+        <span lang="ar" dir="rtl">اضغط في أي مكان للبدء</span>
+      </p>
+      <p class="start-status" id="start-status" role="status"></p>
+      <div class="start-links">
+        <button class="link-btn" id="change-lang" type="button" data-i18n="changeLanguage" hidden></button>
+        <a class="start-lab" href="lab.html" data-i18n="labLink"></a>
+      </div>
+    </div>
   </section>
 
-  <footer class="bottom">
-    <div class="row">
-      <button id="live" type="button" class="chip on">Camera</button>
-      <label class="chip" for="file">Photo</label>
-      <input id="file" type="file" accept="image/*" hidden>
-      <span id="stats" class="stats" dir="ltr"></span>
+  <!-- Language question: say "English" or "Arabic", or tap a half of the screen -->
+  <section class="chooser" id="chooser" hidden>
+    <button class="half half-en" id="choose-en" type="button" lang="en" dir="ltr">English<small>Say “English”</small></button>
+    <p class="listening" id="listening" role="status" aria-live="off"></p>
+    <button class="half half-ar" id="choose-ar" type="button" lang="ar" dir="rtl">العربية<small>قل «عربي»</small></button>
+  </section>
+
+  <!-- Shown when the camera or model can't start -->
+  <section class="problem" id="problem" hidden>
+    <div class="problem-inner" role="alert">
+      <h2 id="problem-title"></h2>
+      <p id="problem-text"></p>
+      <div class="problem-actions">
+        <button class="big-btn primary" id="problem-retry" type="button" data-i18n="tryAgain"></button>
+        <button class="big-btn" id="problem-settings" type="button" data-i18n="openSettings"></button>
+      </div>
     </div>
-    <div id="samples" class="samples" dir="ltr" aria-label="Sample photos"></div>
-  </footer>
-  <p id="announcer" class="sr" aria-live="assertive"></p>
-</main>
-<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/ort.min.js"></script>
-<script src="app.js"></script>
+  </section>
+
+  <dialog class="sheet" id="settings" aria-labelledby="settings-title">
+    <form method="dialog" class="sheet-inner">
+      <header class="sheet-head">
+        <h2 id="settings-title" data-i18n="settingsTitle"></h2>
+        <button class="tool" value="close" data-i18n-aria="close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+        </button>
+      </header>
+
+      <fieldset>
+        <legend data-i18n="sectionModel"></legend>
+        <input type="hidden" id="model-url">
+        <button type="button" id="load-link" hidden></button>
+        <button type="button" id="use-builtin" hidden></button>
+        <p class="model-status" id="model-status" role="status"></p>
+      </fieldset>
+
+      <fieldset>
+        <legend data-i18n="sectionRecognition"></legend>
+        <div class="slider">
+          <label for="threshold" data-i18n="threshold"></label>
+          <output id="threshold-out" for="threshold" dir="ltr"></output>
+          <input type="range" id="threshold" min="50" max="99" step="1">
+        </div>
+        <div class="slider">
+          <label for="hold" data-i18n="hold"></label>
+          <output id="hold-out" for="hold" dir="ltr"></output>
+          <input type="range" id="hold" min="300" max="2000" step="100">
+        </div>
+        <label class="toggle"><span data-i18n="mirror"></span><input type="checkbox" class="switch" id="opt-mirror"></label>
+      </fieldset>
+
+      <fieldset>
+        <legend data-i18n="sectionFeedback"></legend>
+        <label class="toggle"><span data-i18n="speak"></span><input type="checkbox" class="switch" id="opt-voice"></label>
+        <label class="toggle"><span data-i18n="feedback"></span><input type="checkbox" class="switch" id="opt-feedback"></label>
+        <label class="toggle"><span data-i18n="bars"></span><input type="checkbox" class="switch" id="opt-bars"></label>
+      </fieldset>
+
+      <a class="lab-link" href="lab.html" data-i18n="openLab"></a>
+      <p class="privacy" data-i18n="privacy"></p>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" hidden></div>
 </body>
 </html>
